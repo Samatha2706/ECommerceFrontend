@@ -4,8 +4,10 @@ import {
   updateCartItem,
   removeCartItem,
 } from "../services/cartService";
+import { useNavigate } from "react-router-dom";
 
 function Cart() {
+  const navigate = useNavigate();
   const [cart, setCart] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -72,11 +74,7 @@ function Cart() {
 
               <p>Subtotal: ₹{item.subTotal}</p>
 
-              <button
-                onClick={() =>
-                  handleUpdate(item.id, item.quantity + 1)
-                }
-              >
+              <button onClick={() => handleUpdate(item.id, item.quantity + 1)}>
                 +
               </button>
 
@@ -90,13 +88,15 @@ function Cart() {
                 -
               </button>
 
-              <button onClick={() => handleRemove(item.id)}>
-                Remove
-              </button>
+              <button onClick={() => handleRemove(item.id)}>Remove</button>
             </div>
           ))}
 
           <h2>Total: ₹{cart.totalAmount}</h2>
+          
+          <button onClick={() => navigate("/checkout")}>
+            Proceed to Checkout
+          </button>
         </div>
       )}
     </div>
