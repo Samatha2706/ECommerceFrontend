@@ -4,10 +4,11 @@ import {
   updateCartItem,
   removeCartItem,
 } from "../services/cartService";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 
 function Cart() {
   const navigate = useNavigate();
+
   const [cart, setCart] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -34,7 +35,7 @@ function Cart() {
       setCart(data);
     } catch (err) {
       console.error(err);
-      alert("Unable to update cart.");
+      alert(err.response?.data?.message || "Unable to update cart.");
     }
   };
 
@@ -49,56 +50,118 @@ function Cart() {
   };
 
   if (loading) {
-    return <h2>Loading cart...</h2>;
+    return <h2 className="page-message">Loading cart...</h2>;
   }
 
   if (error) {
-    return <h2>{error}</h2>;
+    return <h2 className="page-message error-message">{error}</h2>;
+  }
+
+  const isEmpty = !cart || cart.items.length === 0;
+
+  if (isEmpty) {
+    return (
+      <div className="empty-cart">
+        <div className="empty-cart-icon">🛒</div>
+
+        <h1>Your Cart is Empty</h1>
+
+        <p>Looks like you haven't added anything to your cart yet.</p>
+
+        <Link to="/products" className="shop-button">
+          Continue Shopping
+        </Link>
+      </div>
+    );
   }
 
   return (
-    <div>
-      <h1>Your Cart</h1>
+    <div className="cart-page">
+      <div className="cart-header">
+        <h1>Shopping Cart</h1>
+        <p>
+          {cart.items.length} {cart.items.length === 1 ? "item" : "items"} in
+          your cart
+        </p>
+      </div>
 
-      {!cart || cart.items.length === 0 ? (
-        <p>Your cart is empty.</p>
-      ) : (
-        <div>
+      <div className="cart-layout">
+        <div className="cart-items">
           {cart.items.map((item) => (
-            <div key={item.id}>
-              <h3>{item.productName}</h3>
+            <div className="cart-item" key={item.cartItemId}>
+              <div className="cart-item-image">
+                <span>Product</span>
+              </div>
 
-              <p>Price: ₹{item.unitPrice}</p>
+              <div className="cart-item-info">
+                <h2>{item.productName}</h2>
 
-              <p>Quantity: {item.quantity}</p>
+                <p className="cart-item-price">₹{item.unitPrice}</p>
 
-              <p>Subtotal: ₹{item.subTotal}</p>
+                <div className="cart-item-actions">
+                  <div className="quantity-controls">
+                    <button
+                      disabled={item.quantity <= 1}
+                      onClick={() =>
+                        handleUpdate(item.cartItemId, item.quantity - 1)
+                      }
+                    >
+                      −
+                    </button>
 
-              <button onClick={() => handleUpdate(item.id, item.quantity + 1)}>
-                +
-              </button>
+                    <span>{item.quantity}</span>
 
-              <button
-                onClick={() => {
-                  if (item.quantity > 1) {
-                    handleUpdate(item.id, item.quantity - 1);
-                  }
-                }}
-              >
-                -
-              </button>
+                    <button
+                      onClick={() =>
+                        handleUpdate(item.cartItemId, item.quantity + 1)
+                      }
+                    >
+                      +
+                    </button>
+                  </div>
 
-              <button onClick={() => handleRemove(item.id)}>Remove</button>
+                  <button
+                    className="remove-button"
+                    onClick={() => handleRemove(item.cartItemId)}
+                  >
+                    Remove
+                  </button>
+                </div>
+              </div>
+
+              <div className="cart-item-subtotal">
+                <span>Subtotal</span>
+                <strong>₹{item.subtotal}</strong>
+              </div>
             </div>
           ))}
+        </div>
 
-          <h2>Total: ₹{cart.totalAmount}</h2>
-          
-          <button onClick={() => navigate("/checkout")}>
+        <div className="cart-summary">
+          <h2>Order Summary</h2>
+
+          <div className="summary-row">
+            <span>Items</span>
+            <span>{cart.items.length}</span>
+          </div>
+
+          <div className="summary-row total-row">
+            <span>Total</span>
+            <strong>₹{cart.totalAmount}</strong>
+          </div>
+
+          <button
+            className="checkout-button"
+            onClick={() => navigate("/checkout")}
+          >
             Proceed to Checkout
           </button>
+
+          <Link to="/products" className="continue-shopping">
+            ← Continue Shopping
+          </Link>
         </div>
-      )}
+      </div>
     </div>
   );
 }

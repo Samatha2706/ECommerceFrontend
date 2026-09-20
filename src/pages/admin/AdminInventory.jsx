@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { getProducts } from "../../services/productService";
 import {
   getInventoryByProductId,
   updateInventory,
@@ -7,195 +6,241 @@ import {
 } from "../../services/inventoryService";
 
 function AdminInventory() {
-  const [products, setProducts] = useState([]);
-  const [inventory, setInventory] = useState([]);
+  const [productId, setProductId] = useState("");
+  const [inventory, setInventory] = useState(null);
   const [lowStockItems, setLowStockItems] = useState([]);
-
-  const [selectedProductId, setSelectedProductId] = useState("");
 
   const [quantity, setQuantity] = useState("");
   const [reorderLevel, setReorderLevel] = useState("");
 
-  const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+
   const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
 
-  const loadData = async () => {
+  const loadInventory = async () => {
+    if (!productId) {
+      setError("Please enter a product ID.");
+      return;
+    }
+
     try {
+      setLoading(true);
       setError("");
+      setMessage("");
 
-      const productData = await getProducts({
-        pageNumber: 1,
-        pageSize: 100,
-      });
+      const data = await getInventoryByProductId(productId);
 
-      setProducts(productData.products);
-
-      const lowStockData = await getLowStock();
-      setLowStockItems(lowStockData);
+      setInventory(data);
+      setQuantity(data.quantity ?? "");
+      setReorderLevel(data.reorderLevel ?? "");
     } catch (err) {
       console.error(err);
-      setError("Unable to load inventory data.");
+      setInventory(null);
+      setError(
+        err.response?.data?.message ||
+          "Unable to load inventory for this product.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadLowStock = async () => {
+    try {
+      const data = await getLowStock();
+      setLowStockItems(data);
+    } catch (err) {
+      console.error(err);
     }
   };
 
   useEffect(() => {
-    loadData();
+    loadLowStock();
   }, []);
-
-  const handleProductChange = async (e) => {
-    const productId = e.target.value;
-
-    setSelectedProductId(productId);
-    setMessage("");
-    setError("");
-
-    if (!productId) {
-      setQuantity("");
-      setReorderLevel("");
-      return;
-    }
-
-    try {
-      const data = await getInventoryByProductId(productId);
-
-      setQuantity(data.quantity);
-      setReorderLevel(data.reorderLevel);
-
-      setInventory(data);
-    } catch (err) {
-      console.error(err);
-      setError("Unable to load product inventory.");
-    }
-  };
 
   const handleUpdate = async (e) => {
     e.preventDefault();
 
-    if (!selectedProductId) {
-      setError("Please select a product.");
-      return;
-    }
+    if (!inventory) return;
 
     try {
-      setMessage("");
+      setSaving(true);
       setError("");
+      setMessage("");
 
-      const data = await updateInventory(
-        selectedProductId,
-        {
-          quantity: Number(quantity),
-          reorderLevel: Number(reorderLevel),
-        }
-      );
+      const updated = await updateInventory(productId, {
+        quantity: Number(quantity),
+        reorderLevel: Number(reorderLevel),
+      });
 
-      setInventory(data);
-
+      setInventory(updated);
       setMessage("Inventory updated successfully.");
 
-      const lowStockData = await getLowStock();
-      setLowStockItems(lowStockData);
+      await loadLowStock();
     } catch (err) {
       console.error(err);
-
-      setError(
-        err.response?.data?.message ||
-          "Unable to update inventory."
-      );
+      setError(err.response?.data?.message || "Unable to update inventory.");
+    } finally {
+      setSaving(false);
     }
   };
 
+  const getStockStatus = (item) => {
+    if (item.quantity <= item.reorderLevel) {
+      return "Low Stock";
+    }
+
+    return "In Stock";
+  };
+
   return (
-    <div>
-      <h1>Admin - Inventory</h1>
-
-      {message && <p>{message}</p>}
-      {error && <p>{error}</p>}
-
-      <h2>Update Inventory</h2>
-
-      <div>
-        <label>Select Product</label>
-
-        <select
-          value={selectedProductId}
-          onChange={handleProductChange}
-        >
-          <option value="">Select Product</option>
-
-          {products.map((product) => (
-            <option
-              key={product.id}
-              value={product.id}
-            >
-              {product.name}
-            </option>
-          ))}
-        </select>
+    <div className="admin-inventory-page">
+      <div className="admin-page-header">
+        <div>
+          <p className="admin-eyebrow">ADMIN PANEL</p>
+          <h1>Inventory Management</h1>
+          <p>Monitor product stock levels and update inventory details.</p>
+        </div>
       </div>
 
-      {inventory && selectedProductId && (
-        <form onSubmit={handleUpdate}>
-          <div>
-            <label>Quantity</label>
-
-            <input
-              type="number"
-              min="0"
-              value={quantity}
-              onChange={(e) =>
-                setQuantity(e.target.value)
-              }
-              required
-            />
-          </div>
-
-          <div>
-            <label>Reorder Level</label>
-
-            <input
-              type="number"
-              min="0"
-              value={reorderLevel}
-              onChange={(e) =>
-                setReorderLevel(e.target.value)
-              }
-              required
-            />
-          </div>
-
-          <button type="submit">
-            Update Inventory
-          </button>
-        </form>
-      )}
-
-      <hr />
-
-      <h2>Low Stock Products</h2>
-
-      {lowStockItems.length === 0 ? (
-        <p>No low-stock products.</p>
-      ) : (
-        <div>
-          {lowStockItems.map((item) => (
-            <div key={item.productId}>
-              <h3>{item.productName}</h3>
-
-              <p>
-                Quantity: {item.quantity}
-              </p>
-
-              <p>
-                Reorder Level: {item.reorderLevel}
-              </p>
-
-              <p>
-                Status: Low Stock
-              </p>
+      <div className="inventory-layout">
+        {/* Update Inventory */}
+        <div className="inventory-form-card">
+          <div className="admin-card-heading">
+            <div>
+              <h2>Update Inventory</h2>
+              <p>Enter a product ID to manage its stock.</p>
             </div>
-          ))}
+          </div>
+
+          <div className="inventory-search">
+            <label>Product ID</label>
+
+            <div className="inventory-search-row">
+              <input
+                type="number"
+                value={productId}
+                onChange={(e) => setProductId(e.target.value)}
+                placeholder="e.g. 1"
+                min="1"
+              />
+
+              <button
+                type="button"
+                className="admin-primary-button"
+                onClick={loadInventory}
+                disabled={loading}
+              >
+                {loading ? "Loading..." : "Load"}
+              </button>
+            </div>
+          </div>
+
+          {inventory && (
+            <form className="inventory-update-form" onSubmit={handleUpdate}>
+              <div className="inventory-product-info">
+                <span>Product ID</span>
+                <strong>{productId}</strong>
+              </div>
+
+              <label>Available Quantity</label>
+              <input
+                type="number"
+                min="0"
+                value={quantity}
+                onChange={(e) => setQuantity(e.target.value)}
+                required
+              />
+
+              <label>Reorder Level</label>
+              <input
+                type="number"
+                min="0"
+                value={reorderLevel}
+                onChange={(e) => setReorderLevel(e.target.value)}
+                required
+              />
+
+              {error && <p className="admin-error">{error}</p>}
+              {message && <p className="admin-success">{message}</p>}
+
+              <button
+                type="submit"
+                className="admin-submit-button"
+                disabled={saving}
+              >
+                {saving ? "Updating..." : "Update Inventory"}
+              </button>
+            </form>
+          )}
+
+          {!inventory && !loading && (
+            <div className="inventory-empty-state">
+              <div className="inventory-empty-icon">📦</div>
+              <h3>No inventory selected</h3>
+              <p>Enter a product ID above to view and update its inventory.</p>
+            </div>
+          )}
+
+          {error && !inventory && (
+            <p className="admin-error inventory-main-error">{error}</p>
+          )}
         </div>
-      )}
+
+        {/* Low Stock */}
+        <div className="inventory-low-stock-card">
+          <div className="admin-card-heading">
+            <div>
+              <h2>Low Stock</h2>
+              <p>Products that need inventory attention.</p>
+            </div>
+
+            <span className="inventory-count-badge">
+              {lowStockItems.length}
+            </span>
+          </div>
+
+          {lowStockItems.length === 0 ? (
+            <div className="inventory-no-low-stock">
+              <div className="inventory-success-icon">✓</div>
+              <h3>Stock levels look good</h3>
+              <p>No products are currently below their reorder level.</p>
+            </div>
+          ) : (
+            <div className="low-stock-list">
+              {lowStockItems.map((item) => (
+                <div className="low-stock-item" key={item.productId || item.id}>
+                  <div className="low-stock-icon">⚠</div>
+
+                  <div className="low-stock-info">
+                    <h3>
+                      {item.productName ||
+                        item.name ||
+                        `Product #${item.productId}`}
+                    </h3>
+
+                    <p>Product ID: {item.productId || item.id}</p>
+                  </div>
+
+                  <div className="low-stock-values">
+                    <span className="stock-label">Current</span>
+                    <strong>{item.quantity}</strong>
+
+                    <span className="stock-label">Reorder at</span>
+                    <strong>{item.reorderLevel}</strong>
+                  </div>
+
+                  <span className="low-stock-status">
+                    {getStockStatus(item)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

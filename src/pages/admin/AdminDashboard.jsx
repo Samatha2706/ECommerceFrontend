@@ -1,41 +1,66 @@
 import { Link } from "react-router-dom";
 
 function AdminDashboard() {
+  const adminSections = [
+    {
+      title: "Products",
+      description: "Create, update and manage your products.",
+      link: "/admin/products",
+      icon: "🛍️",
+    },
+    {
+      title: "Categories",
+      description: "Manage product categories.",
+      link: "/admin/categories",
+      icon: "📂",
+    },
+    {
+      title: "Inventory",
+      description: "Manage stock and monitor low-stock products.",
+      link: "/admin/inventory",
+      icon: "📦",
+    },
+    {
+      title: "Orders",
+      description: "View customer orders and update order status.",
+      link: "/admin/orders",
+      icon: "🧾",
+    },
+    {
+      title: "Bulk Upload",
+      description: "Upload multiple products using Excel.",
+      link: "/admin/bulk-upload",
+      icon: "📊",
+    },
+  ];
+
   return (
-    <div>
-      <h1>Admin Dashboard</h1>
-      <p>Manage your e-commerce application.</p>
-
-      <div>
+    <div className="admin-dashboard">
+      <div className="admin-dashboard-header">
         <div>
-          <h2>Products</h2>
-          <p>Create, update and delete products.</p>
-          <Link to="/admin/products">Manage Products</Link>
+          <p className="admin-eyebrow">ADMIN PANEL</p>
+          <h1>Admin Dashboard</h1>
+          <p>
+            Manage products, inventory, categories and customer orders from one
+            place.
+          </p>
         </div>
+      </div>
 
-        <div>
-          <h2>Categories</h2>
-          <p>Manage product categories.</p>
-          <Link to="/admin/categories">Manage Categories</Link>
-        </div>
+      <div className="admin-dashboard-grid">
+        {adminSections.map((section) => (
+          <div className="admin-dashboard-card" key={section.title}>
+            <div className="admin-card-icon">{section.icon}</div>
 
-        <div>
-          <h2>Inventory</h2>
-          <p>Manage stock and monitor low-stock products.</p>
-          <Link to="/admin/inventory">Manage Inventory</Link>
-        </div>
+            <h2>{section.title}</h2>
 
-        <div>
-          <h2>Orders</h2>
-          <p>View customer orders and update order status.</p>
-          <Link to="/admin/orders">Manage Orders</Link>
-        </div>
+            <p>{section.description}</p>
 
-        <div>
-          <h2>Bulk Upload</h2>
-          <p>Upload multiple products using Excel.</p>
-          <Link to="/admin/bulk-upload">Bulk Upload Products</Link>
-        </div>
+            <Link to={section.link} className="admin-card-button">
+              Manage {section.title}
+            </Link>
+          </div>
+        ))}
       </div>
     </div>
   );

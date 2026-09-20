@@ -1,13 +1,10 @@
 import { useEffect, useState } from "react";
 import {
-  getProducts,
-  getProductById,
-} from "../../services/productService";
-import {
   createProduct,
-  updateProduct,
   deleteProduct,
+  updateProduct,
 } from "../../services/adminProductService";
+import { getProducts } from "../../services/productService";
 import { getCategories } from "../../services/categoryService";
 
 function AdminProducts() {
@@ -16,31 +13,36 @@ function AdminProducts() {
 
   const [editingId, setEditingId] = useState(null);
 
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [price, setPrice] = useState("");
-  const [categoryId, setCategoryId] = useState("");
-  const [initialQuantity, setInitialQuantity] = useState("");
-  const [reorderLevel, setReorderLevel] = useState(5);
-  const [isActive, setIsActive] = useState(true);
+  const [form, setForm] = useState({
+    name: "",
+    description: "",
+    price: "",
+    categoryId: "",
+    initialQuantity: "",
+    reorderLevel: "",
+  });
 
-  const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
 
   const loadData = async () => {
     try {
-      const productData = await getProducts({
-        pageNumber: 1,
-        pageSize: 100,
-      });
+      setLoading(true);
 
-      const categoryData = await getCategories();
+      const [productData, categoryData] = await Promise.all([
+        getProducts({ pageSize: 100 }),
+        getCategories(),
+      ]);
 
-      setProducts(productData.products);
+      setProducts(productData.products || productData);
       setCategories(categoryData);
     } catch (err) {
       console.error(err);
-      setError("Unable to load admin data.");
+      setError("Unable to load products.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -48,83 +50,86 @@ function AdminProducts() {
     loadData();
   }, []);
 
-  const clearForm = () => {
+  const resetForm = () => {
+    setForm({
+      name: "",
+      description: "",
+      price: "",
+      categoryId: "",
+      initialQuantity: "",
+      reorderLevel: "",
+    });
+
     setEditingId(null);
-    setName("");
-    setDescription("");
-    setPrice("");
-    setCategoryId("");
-    setInitialQuantity("");
-    setReorderLevel(5);
-    setIsActive(true);
+  };
+
+  const handleChange = (e) => {
+    setForm({
+      ...form,
+      [e.target.name]: e.target.value,
+    });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    setMessage("");
-    setError("");
-
     try {
-      if (editingId) {
-        await updateProduct(editingId, {
-          name,
-          description,
-          price: Number(price),
-          categoryId: Number(categoryId),
-          isActive,
-        });
+      setSaving(true);
+      setError("");
+      setMessage("");
 
+      const productData = {
+        name: form.name,
+        description: form.description,
+        price: Number(form.price),
+        categoryId: Number(form.categoryId),
+        initialQuantity: Number(form.initialQuantity),
+        reorderLevel: Number(form.reorderLevel),
+      };
+
+      if (editingId) {
+        await updateProduct(editingId, productData);
         setMessage("Product updated successfully.");
       } else {
-        await createProduct({
-          name,
-          description,
-          price: Number(price),
-          categoryId: Number(categoryId),
-          initialQuantity: Number(initialQuantity),
-          reorderLevel: Number(reorderLevel),
-        });
-
+        await createProduct(productData);
         setMessage("Product created successfully.");
       }
 
-      clearForm();
+      resetForm();
       await loadData();
     } catch (err) {
       console.error(err);
 
-      setError(
-        err.response?.data?.message ||
-        "Unable to save product."
-      );
+      setError(err.response?.data?.message || "Unable to save product.");
+    } finally {
+      setSaving(false);
     }
   };
 
-  const handleEdit = async (id) => {
-    try {
-      const product = await getProductById(id);
+  const handleEdit = (product) => {
+    setEditingId(product.id);
 
-      setEditingId(product.id);
-      setName(product.name);
-      setDescription(product.description || "");
-      setPrice(product.price);
-      setCategoryId(product.categoryId);
-      setIsActive(product.isActive);
+    setForm({
+      name: product.name || "",
+      description: product.description || "",
+      price: product.price || "",
+      categoryId: product.categoryId || "",
+      initialQuantity: product.availableQuantity || 0,
+      reorderLevel: product.reorderLevel || 0,
+    });
 
-      window.scrollTo({
-        top: 0,
-        behavior: "smooth",
-      });
-    } catch (err) {
-      console.error(err);
-      setError("Unable to load product.");
-    }
+    setMessage("");
+    setError("");
+
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
   };
 
   const handleDelete = async (id) => {
     const confirmed = window.confirm(
-      "Are you sure you want to delete this product?"
+      "Are you sure you want to delete this product?",
     );
 
     if (!confirmed) {
@@ -132,6 +137,9 @@ function AdminProducts() {
     }
 
     try {
+      setError("");
+      setMessage("");
+
       await deleteProduct(id);
 
       setMessage("Product deleted successfully.");
@@ -140,178 +148,227 @@ function AdminProducts() {
     } catch (err) {
       console.error(err);
 
-      setError(
-        err.response?.data?.message ||
-        "Unable to delete product."
-      );
+      setError(err.response?.data?.message || "Unable to delete product.");
     }
   };
 
   return (
-    <div>
-      <h1>Admin - Products</h1>
-
-      {message && <p>{message}</p>}
-      {error && <p>{error}</p>}
-
-      <h2>
-        {editingId ? "Edit Product" : "Add Product"}
-      </h2>
-
-      <form onSubmit={handleSubmit}>
+    <div className="admin-products-page">
+      <div className="admin-page-header">
         <div>
-          <label>Name</label>
-
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            maxLength={150}
-            required
-          />
+          <p className="admin-eyebrow">ADMIN PANEL</p>
+          <h1>Products</h1>
+          <p>Manage your store's product catalog.</p>
         </div>
+      </div>
 
-        <div>
-          <label>Description</label>
+      <div className="admin-product-layout">
+        <div className="admin-product-form-card">
+          <div className="admin-card-heading">
+            <h2>{editingId ? "Edit Product" : "Add Product"}</h2>
 
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            maxLength={500}
-          />
-        </div>
-
-        <div>
-          <label>Price</label>
-
-          <input
-            type="number"
-            step="0.01"
-            min="0.01"
-            value={price}
-            onChange={(e) => setPrice(e.target.value)}
-            required
-          />
-        </div>
-
-        <div>
-          <label>Category</label>
-
-          <select
-            value={categoryId}
-            onChange={(e) => setCategoryId(e.target.value)}
-            required
-          >
-            <option value="">Select Category</option>
-
-            {categories.map((category) => (
-              <option
-                key={category.id}
-                value={category.id}
+            {editingId && (
+              <button
+                type="button"
+                className="cancel-edit-button"
+                onClick={resetForm}
               >
-                {category.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {!editingId && (
-          <>
-            <div>
-              <label>Initial Quantity</label>
-
-              <input
-                type="number"
-                min="0"
-                value={initialQuantity}
-                onChange={(e) =>
-                  setInitialQuantity(e.target.value)
-                }
-                required
-              />
-            </div>
-
-            <div>
-              <label>Reorder Level</label>
-
-              <input
-                type="number"
-                min="0"
-                value={reorderLevel}
-                onChange={(e) =>
-                  setReorderLevel(e.target.value)
-                }
-                required
-              />
-            </div>
-          </>
-        )}
-
-        {editingId && (
-          <div>
-            <label>
-              <input
-                type="checkbox"
-                checked={isActive}
-                onChange={(e) =>
-                  setIsActive(e.target.checked)
-                }
-              />
-
-              Active
-            </label>
+                Cancel
+              </button>
+            )}
           </div>
-        )}
 
-        <button type="submit">
-          {editingId ? "Update Product" : "Create Product"}
-        </button>
+          <form onSubmit={handleSubmit}>
+            <label>Product Name</label>
+            <input
+              type="text"
+              name="name"
+              value={form.name}
+              onChange={handleChange}
+              placeholder="Enter product name"
+              required
+            />
 
-        {editingId && (
-          <button
-            type="button"
-            onClick={clearForm}
-          >
-            Cancel Edit
-          </button>
-        )}
-      </form>
+            <label>Description</label>
+            <textarea
+              name="description"
+              value={form.description}
+              onChange={handleChange}
+              placeholder="Enter product description"
+              rows="4"
+            />
 
-      <hr />
+            <div className="admin-form-row">
+              <div>
+                <label>Price</label>
+                <input
+                  type="number"
+                  name="price"
+                  value={form.price}
+                  onChange={handleChange}
+                  placeholder="0"
+                  min="0"
+                  step="0.01"
+                  required
+                />
+              </div>
 
-      <h2>Products</h2>
+              <div>
+                <label>Category</label>
+                <select
+                  name="categoryId"
+                  value={form.categoryId}
+                  onChange={handleChange}
+                  required
+                >
+                  <option value="">Select category</option>
 
-      {products.map((product) => (
-        <div key={product.id}>
-          <h3>{product.name}</h3>
+                  {categories.map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
 
-          <p>SKU: {product.sku}</p>
+            <div className="admin-form-row">
+              <div>
+                <label>Initial Quantity</label>
+                <input
+                  type="number"
+                  name="initialQuantity"
+                  value={form.initialQuantity}
+                  onChange={handleChange}
+                  min="0"
+                  required
+                />
+              </div>
 
-          <p>Price: ₹{product.price}</p>
+              <div>
+                <label>Reorder Level</label>
+                <input
+                  type="number"
+                  name="reorderLevel"
+                  value={form.reorderLevel}
+                  onChange={handleChange}
+                  min="0"
+                  required
+                />
+              </div>
+            </div>
 
-          <p>Category: {product.categoryName}</p>
+            {error && <p className="admin-error">{error}</p>}
 
-          <p>
-            Available: {product.availableQuantity}
-          </p>
+            {message && <p className="admin-success">{message}</p>}
 
-          <p>
-            Status: {product.isActive ? "Active" : "Inactive"}
-          </p>
-
-          <button
-            onClick={() => handleEdit(product.id)}
-          >
-            Edit
-          </button>
-
-          <button
-            onClick={() => handleDelete(product.id)}
-          >
-            Delete
-          </button>
+            <button
+              type="submit"
+              className="admin-submit-button"
+              disabled={saving}
+            >
+              {saving
+                ? "Saving..."
+                : editingId
+                  ? "Update Product"
+                  : "Create Product"}
+            </button>
+          </form>
         </div>
-      ))}
+
+        <div className="admin-products-card">
+          <div className="admin-card-heading">
+            <div>
+              <h2>Product Catalog</h2>
+              <p>{products.length} products</p>
+            </div>
+          </div>
+
+          {loading ? (
+            <p className="admin-loading">Loading products...</p>
+          ) : products.length === 0 ? (
+            <p className="admin-empty">No products found.</p>
+          ) : (
+            <div className="admin-products-table-wrapper">
+              <table className="admin-products-table">
+                <thead>
+                  <tr>
+                    <th>Product</th>
+                    <th>Category</th>
+                    <th>Price</th>
+                    <th>Stock</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {products.map((product) => (
+                    <tr key={product.id}>
+                      <td>
+                        <div className="admin-product-name">
+                          <div className="admin-product-image">Product</div>
+
+                          <div>
+                            <strong>{product.name}</strong>
+                            <span>SKU: {product.sku || "N/A"}</span>
+                          </div>
+                        </div>
+                      </td>
+
+                      <td>{product.categoryName || "—"}</td>
+
+                      <td>₹{product.price}</td>
+
+                      <td>
+                        <span
+                          className={
+                            product.availableQuantity <= product.reorderLevel
+                              ? "stock-low"
+                              : "stock-good"
+                          }
+                        >
+                          {product.availableQuantity}
+                        </span>
+                      </td>
+
+                      <td>
+                        <span
+                          className={
+                            product.isActive
+                              ? "product-active"
+                              : "product-inactive"
+                          }
+                        >
+                          {product.isActive ? "Active" : "Inactive"}
+                        </span>
+                      </td>
+
+                      <td>
+                        <div className="admin-table-actions">
+                          <button
+                            className="edit-product-button"
+                            onClick={() => handleEdit(product)}
+                          >
+                            Edit
+                          </button>
+
+                          <button
+                            className="delete-product-button"
+                            onClick={() => handleDelete(product.id)}
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

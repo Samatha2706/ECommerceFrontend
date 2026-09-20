@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import api from "../services/api";
 
 function Register() {
@@ -8,6 +8,7 @@ function Register() {
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
 
@@ -16,6 +17,7 @@ function Register() {
 
     setMessage("");
     setError("");
+    setLoading(true);
 
     try {
       await api.post("/auth/register", {
@@ -24,63 +26,107 @@ function Register() {
         password,
       });
 
-      setMessage("Registration successful! You can now login.");
+      setMessage("Registration successful! Redirecting to login...");
 
       setTimeout(() => {
         navigate("/login");
-      }, 1000);
+      }, 1200);
     } catch (err) {
       console.error(err);
 
       setError(
-        err.response?.data?.message ||
-        "Registration failed."
+        err.response?.data?.message || "Registration failed. Please try again.",
       );
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div>
-      <h1>Create Account</h1>
+    <div className="auth-page">
+      <div className="auth-card">
+        <div className="auth-brand">
+          <div className="auth-logo">S</div>
 
-      <form onSubmit={handleRegister}>
-        <div>
-          <label>Full Name</label>
-          <input
-            type="text"
-            value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
-            required
-          />
+          <div>
+            <h1>ShopEase</h1>
+            <p>Simple. Secure. Shopping.</p>
+          </div>
         </div>
 
-        <div>
-          <label>Email</label>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
+        <div className="auth-heading">
+          <h2>Create your account</h2>
+          <p>Join ShopEase and start exploring our products.</p>
         </div>
 
-        <div>
-          <label>Password</label>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
+        <form className="auth-form" onSubmit={handleRegister}>
+          <div className="auth-field">
+            <label htmlFor="fullName">Full Name</label>
+
+            <input
+              id="fullName"
+              type="text"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              placeholder="Enter your full name"
+              autoComplete="name"
+              required
+            />
+          </div>
+
+          <div className="auth-field">
+            <label htmlFor="registerEmail">Email Address</label>
+
+            <input
+              id="registerEmail"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Enter your email"
+              autoComplete="email"
+              required
+            />
+          </div>
+
+          <div className="auth-field">
+            <label htmlFor="registerPassword">Password</label>
+
+            <input
+              id="registerPassword"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Create a password"
+              autoComplete="new-password"
+              required
+            />
+          </div>
+
+          {message && <div className="auth-success">✓ {message}</div>}
+
+          {error && <div className="auth-error">{error}</div>}
+
+          <button
+            type="submit"
+            className="auth-submit-button"
+            disabled={loading}
+          >
+            {loading ? "Creating Account..." : "Create Account"}
+          </button>
+        </form>
+
+        <div className="auth-divider">
+          <span>OR</span>
         </div>
 
-        <button type="submit">
-          Register
-        </button>
-      </form>
+        <p className="auth-switch">
+          Already have an account? <Link to="/login">Sign in</Link>
+        </p>
 
-      {message && <p>{message}</p>}
-      {error && <p>{error}</p>}
+        <Link to="/" className="auth-home-link">
+          ← Back to ShopEase
+        </Link>
+      </div>
     </div>
   );
 }

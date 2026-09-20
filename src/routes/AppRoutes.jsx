@@ -16,6 +16,8 @@ import AdminOrders from "../pages/admin/AdminOrders";
 import BulkProductUpload from "../pages/admin/BulkProductUpload";
 import ProtectedRoute from "./ProtectedRoute";
 import AdminDashboard from "../pages/admin/AdminDashboard";
+import Payment from "../pages/Payment";
+import Profile from "../pages/Profile";
 
 function AppRoutes() {
   return (
@@ -34,8 +36,10 @@ function AppRoutes() {
         <Route element={<ProtectedRoute />}>
           <Route path="/cart" element={<Cart />} />
           <Route path="/checkout" element={<Checkout />} />
+          <Route path="/payment/:orderId" element={<Payment />} />
           <Route path="/orders" element={<Orders />} />
           <Route path="/orders/:id" element={<OrderDetails />} />
+          <Route path="/profile" element={<Profile />} />
         </Route>
 
         {/* Admin protected routes */}
