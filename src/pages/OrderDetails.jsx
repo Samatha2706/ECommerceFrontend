@@ -19,8 +19,23 @@ function OrderDetails() {
 
   useEffect(() => {
     const loadOrderAndConnect = async () => {
-      await loadOrder();
+      try {
+        const orderData = await getOrderById(id);
+        setOrder(orderData);
 
+        try {
+          const paymentData = await getPaymentByOrderId(id);
+          setPayment(paymentData);
+        } catch (paymentError) {
+          console.log("No payment found for this order yet.");
+          setPayment(null);
+        }
+      } catch (err) {
+        console.error(err);
+        setError("Unable to load order details.");
+      } finally {
+        setLoading(false);
+      }
       await startSignalRConnection((data) => {
         if (Number(data.orderId) === Number(id)) {
           setOrder((currentOrder) => ({

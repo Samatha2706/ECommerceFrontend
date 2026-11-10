@@ -9,7 +9,7 @@ export const checkout = async (shippingAddress) => {
 };
 
 export const getMyOrders = async () => {
-  const response = await api.get("/Order");
+  const response = await api.get("/Order/my-orders");
   return response.data;
 };
 

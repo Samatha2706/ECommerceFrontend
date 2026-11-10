@@ -173,7 +173,7 @@ function AdminOrders() {
                       </span>
                     </td>
 
-                    <td>{new Date(order.orderDate).toLocaleDateString()}</td>
+                    <td>{new Date(order.createdAt).toLocaleDateString()}</td>
 
                     <td>
                       <strong>
@@ -245,7 +245,7 @@ function AdminOrders() {
                 <div>
                   <span>Order Date</span>
                   <strong>
-                    {new Date(selectedOrder.orderDate).toLocaleString()}
+                    {new Date(selectedOrder.createdAt).toLocaleString()}
                   </strong>
                 </div>
 

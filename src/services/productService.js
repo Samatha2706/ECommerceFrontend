@@ -30,7 +30,7 @@ export const getProducts = async (filters = {}) => {
   params.pageNumber = filters.pageNumber || 1;
   params.pageSize = filters.pageSize || 10;
 
-  const response = await api.get("/products", {
+  const response = await api.get("/Product", {
     params,
   });
 
@@ -38,6 +38,6 @@ export const getProducts = async (filters = {}) => {
 };
 
 export const getProductById = async (id) => {
-  const response = await api.get(`/products/${id}`);
+  const response = await api.get(`/Product/${id}`);
   return response.data;
 };

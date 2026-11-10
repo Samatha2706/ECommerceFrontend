@@ -1,8 +1,7 @@
 import api from "./api";
 
 export const processPayment = async (orderId, paymentMethod) => {
-  const response = await api.post("/Payment/process", {
-    orderId,
+  const response = await api.post(`/Order/${orderId}/pay`, {
     paymentMethod,
   });
 

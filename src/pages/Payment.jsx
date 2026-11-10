@@ -42,8 +42,13 @@ function Payment() {
 
       const result = await processPayment(orderId, paymentMethod);
 
-      setPayment(result);
-      setStatus("success");
+      if (result.status === 2) {
+        setPayment(result);
+        setStatus("success");
+      } else {
+        setError("Payment was unsuccessful. Please try again.");
+        setStatus("failed");
+      }
     } catch (err) {
       console.error(err);
 
@@ -197,24 +202,6 @@ function Payment() {
             <div>
               <strong>Net Banking</strong>
               <span>Pay securely through your bank</span>
-            </div>
-          </label>
-
-          <label
-            className={`payment-option ${
-              paymentMethod === "Cash on Delivery" ? "selected" : ""
-            }`}
-          >
-            <input
-              type="radio"
-              value="Cash on Delivery"
-              checked={paymentMethod === "Cash on Delivery"}
-              onChange={(e) => setPaymentMethod(e.target.value)}
-            />
-
-            <div>
-              <strong>Cash on Delivery</strong>
-              <span>Pay when your order arrives</span>
             </div>
           </label>
 
