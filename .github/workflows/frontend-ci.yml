@@ -1,4 +1,4 @@
-name: Frontend CI
+name: Frontend CI and CD
 
 on:
   push:
@@ -10,6 +10,7 @@ on:
 
 jobs:
   build:
+    name: Frontend CI
     runs-on: ubuntu-latest
 
     steps:
@@ -30,3 +31,34 @@ jobs:
 
       - name: Build frontend
         run: npm run build
+
+  deploy:
+    name: Deploy to Kind
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Build frontend image
+        run: |
+          podman build -t localhost/ecommerce-frontend:${{ github.sha }} -f Containerfile .
+
+      - name: Import image into Kind
+        run: |
+          podman save --format docker-archive -o frontend.tar localhost/ecommerce-frontend:${{ github.sha }}
+          podman cp frontend.tar ecommerce-podman-control-plane:/tmp/frontend.tar
+          podman exec ecommerce-podman-control-plane ctr -n k8s.io images import /tmp/frontend.tar
+          podman exec ecommerce-podman-control-plane rm -f /tmp/frontend.tar
+          rm -f frontend.tar
+
+      - name: Update Kubernetes deployment
+        run: |
+          kubectl --context kind-ecommerce-podman set image deployment/ecommerce-frontend ecommerce-frontend=localhost/ecommerce-frontend:${{ github.sha }}
+          kubectl --context kind-ecommerce-podman rollout status deployment/ecommerce-frontend --timeout=180s
+
+      - name: Verify deployment
+        run: |
+          kubectl --context kind-ecommerce-podman get deployment ecommerce-frontend
