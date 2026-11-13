@@ -26,7 +26,7 @@ function OrderDetails() {
         try {
           const paymentData = await getPaymentByOrderId(id);
           setPayment(paymentData);
-        } catch (paymentError) {
+        } catch {
           console.log("No payment found for this order yet.");
           setPayment(null);
         }

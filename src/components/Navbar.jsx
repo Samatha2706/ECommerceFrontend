@@ -19,7 +19,7 @@ function Navbar() {
         ] || payload.role;
 
       isAdmin = role === "Admin";
-    } catch (error) {
+    } catch {
       console.error("Invalid token");
     }
   }

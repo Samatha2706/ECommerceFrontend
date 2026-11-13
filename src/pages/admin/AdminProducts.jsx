@@ -47,7 +47,32 @@ function AdminProducts() {
   };
 
   useEffect(() => {
-    loadData();
+    let isMounted = true;
+
+    Promise.all([getProducts({ pageSize: 100 }), getCategories()])
+      .then(([productData, categoryData]) => {
+        if (isMounted) {
+          setProducts(productData.products || productData);
+          setCategories(categoryData);
+          setError("");
+        }
+      })
+      .catch((err) => {
+        console.error(err);
+
+        if (isMounted) {
+          setError("Unable to load products.");
+        }
+      })
+      .finally(() => {
+        if (isMounted) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const resetForm = () => {

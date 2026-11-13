@@ -22,10 +22,9 @@ function AdminCategories() {
 
   const loadCategories = async () => {
     try {
-      setLoading(true);
-
       const data = await getCategories();
       setCategories(data);
+      setError("");
     } catch (err) {
       console.error(err);
       setError("Unable to load categories.");
@@ -35,7 +34,31 @@ function AdminCategories() {
   };
 
   useEffect(() => {
-    loadCategories();
+    let isMounted = true;
+
+    getCategories()
+      .then((data) => {
+        if (isMounted) {
+          setCategories(data);
+          setError("");
+        }
+      })
+      .catch((err) => {
+        console.error(err);
+
+        if (isMounted) {
+          setError("Unable to load categories.");
+        }
+      })
+      .finally(() => {
+        if (isMounted) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const resetForm = () => {

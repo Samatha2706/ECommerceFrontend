@@ -51,7 +51,30 @@ function AdminOrders() {
   };
 
   useEffect(() => {
-    loadOrders();
+    let isMounted = true;
+
+    getAllOrders()
+      .then((data) => {
+        if (isMounted) {
+          setOrders(data);
+        }
+      })
+      .catch((err) => {
+        console.error(err);
+
+        if (isMounted) {
+          setError("Unable to load orders.");
+        }
+      })
+      .finally(() => {
+        if (isMounted) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const handleViewOrder = async (orderId) => {

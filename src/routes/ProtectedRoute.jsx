@@ -8,6 +8,9 @@ function ProtectedRoute({ adminOnly = false }) {
   }
 
   if (adminOnly) {
+    let isAdmin = false;
+    let invalidToken = false;
+
     try {
       const payload = JSON.parse(atob(token.split(".")[1]));
 
@@ -16,13 +19,19 @@ function ProtectedRoute({ adminOnly = false }) {
           "http://schemas.microsoft.com/ws/2008/06/identity/claims/role"
         ] || payload.role;
 
-      if (role !== "Admin") {
-        return <Navigate to="/" replace />;
-      }
+      isAdmin = role === "Admin";
     } catch (error) {
       console.error("Invalid token:", error);
       localStorage.removeItem("token");
+      invalidToken = true;
+    }
+
+    if (invalidToken) {
       return <Navigate to="/login" replace />;
+    }
+
+    if (!isAdmin) {
+      return <Navigate to="/" replace />;
     }
   }
 

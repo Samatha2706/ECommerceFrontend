@@ -13,20 +13,20 @@ function Cart() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const loadCart = async () => {
-    try {
-      const data = await getCart();
-      setCart(data);
-    } catch (err) {
-      console.error(err);
-      setError("Unable to load cart.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    loadCart();
+    const fetchCart = async () => {
+      try {
+        const data = await getCart();
+        setCart(data);
+      } catch (err) {
+        console.error(err);
+        setError("Unable to load cart.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCart();
   }, []);
 
   const handleUpdate = async (cartItemId, quantity) => {

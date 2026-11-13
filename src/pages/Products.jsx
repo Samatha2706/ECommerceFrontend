@@ -20,35 +20,43 @@ function Products() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const loadProducts = async () => {
-    try {
-      setLoading(true);
-      setError("");
+  useEffect(() => {
+    let isMounted = true;
 
-      const data = await getProducts({
-        search,
-        categoryId,
-        minPrice,
-        maxPrice,
-        sortBy,
-        sortOrder,
-        pageNumber,
-        pageSize: 10,
+    getProducts({
+      search,
+      categoryId,
+      minPrice,
+      maxPrice,
+      sortBy,
+      sortOrder,
+      pageNumber,
+      pageSize: 10,
+    })
+      .then((data) => {
+        if (isMounted) {
+          setProducts(data.products);
+          setTotalPages(data.totalPages);
+          setError("");
+        }
+      })
+      .catch((err) => {
+        console.error(err);
+
+        if (isMounted) {
+          setError("Unable to load products.");
+        }
+      })
+      .finally(() => {
+        if (isMounted) {
+          setLoading(false);
+        }
       });
 
-      setProducts(data.products);
-      setTotalPages(data.totalPages);
-    } catch (err) {
-      console.error(err);
-      setError("Unable to load products.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadProducts();
-  }, [pageNumber, sortBy, sortOrder]);
+    return () => {
+      isMounted = false;
+    };
+  }, [search, categoryId, minPrice, maxPrice, sortBy, sortOrder, pageNumber]);
 
   useEffect(() => {
     const loadCategories = async () => {
@@ -66,7 +74,6 @@ function Products() {
   const handleSearch = (e) => {
     e.preventDefault();
     setPageNumber(1);
-    loadProducts();
   };
 
   return (

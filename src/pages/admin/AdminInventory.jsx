@@ -57,7 +57,13 @@ function AdminInventory() {
   };
 
   useEffect(() => {
-    loadLowStock();
+    getLowStock()
+      .then((data) => {
+        setLowStockItems(data);
+      })
+      .catch((err) => {
+        console.error(err);
+      });
   }, []);
 
   const handleUpdate = async (e) => {
